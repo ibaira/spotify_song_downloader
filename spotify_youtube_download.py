@@ -28,8 +28,6 @@ def download_webfile(url, filename=None, **ydl_opts):
 
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
-    else:
-        print "No filename given!" 
         
 
 if __name__ == '__main__':
@@ -48,8 +46,10 @@ if __name__ == '__main__':
     print metadata['xesam:title']
     print metadata['xesam:albumArtist'][0]
 
-    ### Prepare Search key removing special characters
-    textToSearch = remove_accents(metadata['xesam:title']) + " " + remove_accents(metadata['xesam:albumArtist'][0]) + " " + "Official Music Video"  # keywords
+    # Prepare Search key removing special characters
+    textToSearch =   remove_accents(metadata['xesam:title']) + " " \
+                   + remove_accents(metadata['xesam:albumArtist'][0]) + " " \
+                   + "Official Music Video"  # keywords
 
     # Search on YouTube and give url of the video
     query = urllib.quote(textToSearch)
@@ -57,17 +57,23 @@ if __name__ == '__main__':
     response = urllib2.urlopen(url)
     html = response.read()
     soup = BeautifulSoup(html, "lxml")
-    for vid in soup.findAll(attrs={'class':'yt-uix-tile-link'}):
+    
+    # Get just the first (limit=1) entry of the YouTube page 
+    for vid in soup.findAll(attrs={'class':'yt-uix-tile-link'}, limit=1):
         print 'https://www.youtube.com' + vid['href']
-        break  # Get just the first entry of the YouTube page 
 
     # Download audio from YouTube using youtube-dl
-    filename = './songs/{0} - {1}'.format(remove_accents(metadata['xesam:title']), remove_accents(metadata['xesam:albumArtist'][0])) 
-
-    print "The song will be saved in: ", filename, ".mp3\n"
+    filename = './new_song' 
     download_webfile('https://www.youtube.com' + vid['href'], filename)
 
     # Move .mp3 file to the right directory and with a proper name
+    destination = '{0}/Music/{1}-{2}'.format(
+                os.environ['HOME'],
+                remove_accents(metadata['xesam:title']), 
+                remove_accents(metadata['xesam:albumArtist'][0])
+    )
+
+    print "The song will be saved in: ", destination, ".mp3\n"
     for f in os.listdir("."):
         if f == ".mp3":
-            os.rename(f, filename)
+            os.rename(f, destination)
