@@ -24,7 +24,6 @@ def download_webfile(url, filename=None, **ydl_opts):
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
-            # 'restrictfilenames': True
         }
 
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -68,7 +67,7 @@ if __name__ == '__main__':
     print "The song will be saved in: ", filename, ".mp3\n"
     download_webfile('https://www.youtube.com' + vid['href'], filename)
 
-    # Move .mp3 file to the right directory with the right name
+    # Move .mp3 file to the right directory and with a proper name
     for f in os.listdir("."):
         if f == ".mp3":
             os.rename(f, filename)
