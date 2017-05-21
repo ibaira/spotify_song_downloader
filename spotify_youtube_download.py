@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
+from __future__ import unicode_literals
+from bs4 import BeautifulSoup
+import dbus
+import os
+import unicodedata
+import urllib
+import urllib2
+import youtube_dl
+
+
+def remove_accents(input_str):
+    nfkd_form = unicodedata.normalize('NFKD', input_str)
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
+def download_webfile(url, filename=None, **ydl_opts):
+    if filename is not None:
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': filename, 
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            # 'restrictfilenames': True
+        }
+
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+    else:
+        print "No filename given!" 
+        
+
+if __name__ == '__main__':
+    # Read current song in Spotify and obtain its name and artist
+    session_bus = dbus.SessionBus()
+    spotify_bus = session_bus.get_object("org.mpris.MediaPlayer2.spotify",
+                                         "/org/mpris/MediaPlayer2")
+    spotify_properties = dbus.Interface(spotify_bus,
+                                        "org.freedesktop.DBus.Properties")
+    metadata = spotify_properties.Get("org.mpris.MediaPlayer2.Player", 
+                                      "Metadata")
+    # for key, value in metadata.items():
+    #     print key, value
+
+    # To just print the title and artist
+    print metadata['xesam:title']
+    print metadata['xesam:albumArtist'][0]
+
+    ### Prepare Search key removing special characters
+    textToSearch = remove_accents(metadata['xesam:title']) + " " + remove_accents(metadata['xesam:albumArtist'][0]) + " " + "Official Music Video"  # keywords
+
+    # Search on YouTube and give url of the video
+    query = urllib.quote(textToSearch)
+    url = "https://www.youtube.com/results?search_query=" + query
+    response = urllib2.urlopen(url)
+    html = response.read()
+    soup = BeautifulSoup(html, "lxml")
+    for vid in soup.findAll(attrs={'class':'yt-uix-tile-link'}):
+        print 'https://www.youtube.com' + vid['href']
+        break  # Get just the first entry of the YouTube page 
+
+    # Download audio from YouTube using youtube-dl
+    filename = './songs/{0} - {1}'.format(remove_accents(metadata['xesam:title']), remove_accents(metadata['xesam:albumArtist'][0])) 
+
+    print "The song will be saved in: ", filename, ".mp3\n"
+    download_webfile('https://www.youtube.com' + vid['href'], filename)
+
+    # Move .mp3 file to the right directory with the right name
+    for f in os.listdir("."):
+        if f == ".mp3":
+            os.rename(f, filename)
